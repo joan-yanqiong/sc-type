@@ -1,0 +1,98 @@
+---
+title: "run_scType"
+Author: 'Joan Kant'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{run_scType}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+## Download the `pbmc3k` dataset
+
+For this tutorial, you'll use a PBMC 3k dataset (see Seurat tutorial for more details on how to load the dataset using Seurat, [pbmc3k tutorial](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html))
+
+There are two options to obtain the dataset: 
+
+1. Download the gene-count matrix [here](https://cf.10xgenomics.com/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz) and create a Seurat object
+2. Use the SeuratData R-package 
+
+### Option 1 
+
+```{r}
+# load libraries
+library(Seurat)
+
+# Load the PBMC dataset
+pbmc.data <- Read10X(data.dir = "./filtered_gene_bc_matrices/hg19/")
+# Initialize the Seurat object with the raw (non-normalized data).
+pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc3k", min.cells = 3, min.features = 200)
+```
+
+### Option 2: Use the SeuratData R-package
+
+```{r install-pbmc3k eval = FALSE}
+# 1. install SeuratData
+pak::pkg_install("satijalab/seurat-data")
+
+# 2. Install the 'pbmc3k' dataset
+library(SeuratData)
+InstallData("pbmc3k")
+
+# 3. Load the dataset -> seurat object
+data(pbmc3k)
+```
+
+## Prepare dataset
+
+Normalize and cluster the data. 
+
+> `pbmc` is the Seurat object
+
+```{r}
+library(Seurat)
+pbmc <- pbmc3k
+pbmc <- UpdateSeuratObject(pbmc)
+# normalize data
+pbmc[["percent.mt"]] <- PercentageFeatureSet(pbmc, pattern = "^MT-")
+# pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5) # make some filtering based on QC metrics visualizations, see Seurat tutorial: https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
+pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 10000)
+pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
+
+# scale and run PCA
+pbmc <- ScaleData(pbmc, features = rownames(pbmc))
+pbmc <- RunPCA(pbmc, features = VariableFeatures(object = pbmc))
+
+# Check number of PC components (we selected 10 PCs for downstream analysis, based on Elbow plot)
+print(ElbowPlot(pbmc))
+
+# cluster and visualize
+pbmc <- FindNeighbors(pbmc, dims = 1:10)
+pbmc <- FindClusters(pbmc, resolution = 0.8)
+pbmc <- RunUMAP(pbmc, dims = 1:10)
+print(DimPlot(pbmc, reduction = "umap"))
+```
+
+## Run scType
+
+
+```{r setup}
+library(sctype)
+data(ScTypeDB_full)
+
+pbmc <- run_sctype(pbmc,
+    assay = "RNA",
+    scaled = TRUE,
+    known_tissue_type = "Immune system",
+    custom_marker_file = ScTypeDB_full,
+    name = "sctype_classification",
+    plot_umap = TRUE, plot_bubble = TRUE
+)
+```

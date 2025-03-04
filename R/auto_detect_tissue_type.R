@@ -8,13 +8,14 @@
 #' @param celltype_markers_db (dataframe) DB file with cell types
 #' @param seuratObject Seurat Object from wich to extract the input scRNA-seq matrix (rownames - genes, column names - cells),
 #' @param scaled logical indicating whether the matrix is scaled (default=TRUE)
+#' @param cluster_column column in metadata containing the clusters (default='seurat_clusters')
 #' @param assay e.g. RNA, SCT, integrated
 #' @param plot logical indicating whether to plot (default=FALSE)
 #' @return list with two keys containing the postive and negative markers resp.
 #' @author @IanevskiAleksandr
 #' @importFrom dplyr %>% top_n
 #' @export
-auto_detect_tissue_type <- function(celltype_markers_db, seuratObject, scaled, assay = "RNA", plot = FALSE, ...) {
+auto_detect_tissue_type <- function(celltype_markers_db, seuratObject, scaled, cluster_column = "seurat_clusters", assay = "RNA", plot = FALSE, ...) {
     if (!is.logical(scaled)) {
         stop("Argument 'scaled' needs to be a logical/boolean")
     }
@@ -44,8 +45,9 @@ auto_detect_tissue_type <- function(celltype_markers_db, seuratObject, scaled, a
             marker_sensitivity = gs_list$marker_sensitivity, verbose = !0
         )
 
-        cL_results <- do.call("rbind", lapply(unique(seuratObject@meta.data$seurat_clusters), function(cl) {
-            es.max.cl <- sort(rowSums(es.max[, rownames(seuratObject@meta.data[seuratObject@meta.data$seurat_clusters == cl, ])]), decreasing = !0)
+
+        cL_results <- do.call("rbind", lapply(unique(seuratObject@meta.data[[cluster_column]]), function(cl) {
+            es.max.cl <- sort(rowSums(es.max[, rownames(seuratObject@meta.data[seuratObject@meta.data[[cluster_column]] == cl, ])]), decreasing = !0)
             head(data.frame(cluster = cl, type = names(es.max.cl), scores = es.max.cl), 10)
         }))
 

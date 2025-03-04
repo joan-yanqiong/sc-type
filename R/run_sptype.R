@@ -40,6 +40,7 @@
 #' @param known_tissue_type The tissue type of the input data should match what is in referenceDB
 #' @param custom_marker_file Path to the custom marker file (optional)
 #' @param plot_umap logical indicating whether to plot the UMAP (default= FALSE)
+#' @param cluster_column column in metadata containing the clusters (default='seurat_clusters')
 #' @param assay e.g. RNA, SCT, integrated (default="SCT")
 #' @param name The name of the metadata column to store the scType results (default is "sctype_classification")
 #' @return A modified copy of the input Seurat object with a new metadata column
@@ -55,7 +56,7 @@
 run_sptype <- function(
     seurat_object, known_tissue_type = NULL,
     custom_marker_file = NULL,
-    plot_umap = FALSE, name = "sctype_classification", assay = "SCT") {
+    plot_umap = FALSE, name = "sctype_classification", assay = "SCT", cluster_column = "seurat_clusters") {
     # Check for missing arguments
     if (is.null(seurat_object)) {
         stop("Argument 'seurat_object' is missing")
@@ -80,10 +81,10 @@ run_sptype <- function(
 
     # Extract top cell types for each cluster
     cL_results <- do.call("rbind", lapply(
-        unique(seurat_object@meta.data$seurat_clusters),
+        unique(seurat_object@meta.data[[cluster_column]]),
         function(cl) {
-            es.max.cl <- sort(rowSums(es.max[, rownames(seurat_object@meta.data[seurat_object@meta.data$seurat_clusters == cl, ])]), decreasing = !0)
-            head(data.frame(cluster = cl, type = names(es.max.cl), scores = es.max.cl, ncells = sum(seurat_object@meta.data$seurat_clusters == cl)), 10)
+            es.max.cl <- sort(rowSums(es.max[, rownames(seurat_object@meta.data[seurat_object@meta.data[[cluster_column]] == cl, ])]), decreasing = !0)
+            head(data.frame(cluster = cl, type = names(es.max.cl), scores = es.max.cl, ncells = sum(seurat_object@meta.data[[cluster_column]] == cl)), 10)
         }
     ))
     sctype_scores <- cL_results %>%
@@ -97,7 +98,7 @@ run_sptype <- function(
     seurat_object_res@meta.data[name] <- ""
     for (j in unique(sctype_scores$cluster)) {
         cl_type <- sctype_scores[sctype_scores$cluster == j, ]
-        seurat_object_res@meta.data[seurat_object_res@meta.data$seurat_clusters == j, name] <- as.character(cl_type$type[1])
+        seurat_object_res@meta.data[seurat_object_res@meta.data[[cluster_column]] == j, name] <- as.character(cl_type$type[1])
     }
     if (plot_umap) {
         plot_ <- Seurat::DimPlot(seurat_object_res, reduction = "umap", group.by = name)

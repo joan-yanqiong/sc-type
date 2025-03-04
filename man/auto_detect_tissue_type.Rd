@@ -8,6 +8,7 @@ auto_detect_tissue_type(
   celltype_markers_db,
   seuratObject,
   scaled,
+  cluster_column = "seurat_clusters",
   assay = "RNA",
   plot = FALSE,
   ...
@@ -19,6 +20,8 @@ auto_detect_tissue_type(
 \item{seuratObject}{Seurat Object from wich to extract the input scRNA-seq matrix (rownames - genes, column names - cells),}
 
 \item{scaled}{logical indicating whether the matrix is scaled (default=TRUE)}
+
+\item{cluster_column}{column in metadata containing the clusters (default='seurat_clusters')}
 
 \item{assay}{e.g. RNA, SCT, integrated}
 

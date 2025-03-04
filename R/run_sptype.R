@@ -33,7 +33,7 @@
 # }
 
 #' @title Run sctype analysis on Seurat object
-#' @name run_scType
+#' @name run_sptype
 #' @description run an automated cell type annotation on spatial data-- spot type annotation
 #' @details Useful to get an idea of different cells in the sample
 #' @param seurat_object A Spatial Seurat object
